@@ -5,24 +5,44 @@
 
 cmake_minimum_required(VERSION 3.25...3.31)
 
-project(beman_execution26 VERSION 0.0.1 LANGUAGES CXX)
+project(beman_execution VERSION 0.0.1 LANGUAGES CXX)
 
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
   message(FATAL_ERROR "In-source builds are not allowed!")
 endif()
 
-set(TARGET_NAME execution26)
-set(TARGET_NAMESPACE beman) # FIXME: not used in install(EXPORT ...) CK?
+set(TARGET_NAME execution)
+set(TARGET_NAMESPACE beman)
 set(TARGET_PREFIX ${TARGET_NAMESPACE}.${TARGET_NAME})
 set(TARGET_LIBRARY ${PROJECT_NAME})
-set(TARGET_ALIAS ${TARGET_LIBRARY}::${TARGET_LIBRARY})
+set(TARGET_ALIAS ${TARGET_NAMESPACE}::${TARGET_NAME})
 set(TARGET_PACKAGE_NAME ${PROJECT_NAME}-config)
 set(TARGETS_EXPORT_NAME ${PROJECT_NAME}-targets)
+
+option(
+  BEMAN_EXECUTION_ENABLE_TESTING
+  "Enable building tests and test infrastructure. Values: { ON, OFF }."
+  ${PROJECT_IS_TOP_LEVEL}
+)
+
+option(
+  BEMAN_EXECUTION_BUILD_EXAMPLES
+  "Enable building examples. Values: { ON, OFF }."
+  ${PROJECT_IS_TOP_LEVEL}
+)
+
+option(
+  BEMAN_EXECUTION_ENABLE_INSTALL
+  "Install the project components. Values: { ON, OFF }."
+  ${PROJECT_IS_TOP_LEVEL}
+)
 
 include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
+if(PROJECT_IS_TOP_LEVEL AND NOT BEMAN_EXECUTION_ENABLE_INSTALL OR CMAKE_SKIP_INSTALL_RULES)
+  set(CMAKE_SKIP_INSTALL_RULES ON)
+
   include(FetchContent)
 
   # Add project_options from https://github.com/aminya/project_options
@@ -40,7 +60,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
   # uncomment to enable the options. Some of them accept one or more inputs:
   project_options(
     PREFIX
-    ${PROJECT_NAME}
+    ${TARGET_NAME}
     ENABLE_CACHE
     # NO! # ENABLE_CLANG_TIDY
     # NO! ENABLE_VS_ANALYSIS
@@ -71,13 +91,20 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
   )
 endif()
 
-add_subdirectory(src/beman/execution26)
+add_subdirectory(src/beman/execution)
 
-if(PROJECT_IS_TOP_LEVEL)
+if(BEMAN_EXECUTION_ENABLE_TESTING)
   enable_testing()
 
-  add_subdirectory(tests/beman/execution26)
+  add_subdirectory(tests/beman/execution)
+endif()
+
+if(BEMAN_EXECUTION_BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+if(NOT BEMAN_EXECUTION_ENABLE_INSTALL OR CMAKE_SKIP_INSTALL_RULES)
+  return()
 endif()
 
 include(CMakePackageConfigHelpers)

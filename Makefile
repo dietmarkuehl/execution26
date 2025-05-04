@@ -14,7 +14,7 @@ SANITIZERS := run
 #     SANITIZERS += asan # TODO: tsan msan
 # endif
 
-.PHONY: default release debug doc run update check ce todo distclean clean codespell clang-tidy build test install all format $(SANITIZERS)
+.PHONY: default release debug doc run update check ce todo distclean clean codespell clang-tidy build test install all format unstage $(SANITIZERS)
 
 SYSROOT   ?=
 TOOLCHAIN ?=
@@ -34,8 +34,9 @@ CXX_FLAGS ?= -g
 SANITIZER ?= default
 SOURCEDIR = $(CURDIR)
 BUILDROOT = build
-BUILD     = $(BUILDROOT)/$(SANITIZER)
-EXAMPLE   = beman.execution26.examples.stop_token
+SYSTEM    = $(shell uname -s)
+BUILD     = $(BUILDROOT)/$(SYSTEM)/$(SANITIZER)
+EXAMPLE   = beman.execution.examples.stop_token
 CMAKE_CXX_COMPILER=$(COMPILER)
 
 ifeq ($(SANITIZER),release)
@@ -79,7 +80,9 @@ doc:
 
 build:
 	CC=$(CXX) cmake --fresh -G Ninja -S $(SOURCEDIR) -B  $(BUILD) $(TOOLCHAIN) $(SYSROOT) \
-      -DCMAKE_CXX_COMPILER=$(CXX) # XXX -DCMAKE_CXX_FLAGS="$(CXX_FLAGS) $(SAN_FLAGS)"
+	  -D CMAKE_EXPORT_COMPILE_COMMANDS=1 \
+	  -D CMAKE_SKIP_INSTALL_RULES=1 \
+	  -D CMAKE_CXX_COMPILER=$(CXX) # XXX -D CMAKE_CXX_FLAGS="$(CXX_FLAGS) $(SAN_FLAGS)"
 	cmake --build $(BUILD)
 
 # NOTE: without install! CK
@@ -99,7 +102,7 @@ ce:
 	@mkdir -p $(BUILD)
 	bin/mk-compiler-explorer.py $(BUILD)
 
-SOURCE_CMAKELISTS = src/beman/execution26/CMakeLists.txt
+SOURCE_CMAKELISTS = src/beman/execution/CMakeLists.txt
 update:
 	bin/update-cmake-headers.py $(SOURCE_CMAKELISTS)
 
@@ -111,8 +114,9 @@ check:
 	done | tsort > /dev/null
 
 build/$(SANITIZER)/compile_commands.json: $(SANITIZER)
-clang-tidy: build/$(SANITIZER)/compile_commands.json
-	run-clang-tidy -p build/$(SANITIZER) tests examples
+
+clang-tidy: $(BUILD)/compile_commands.json
+	run-clang-tidy -p $(BUILD) tests examples
 
 codespell:
 	codespell -L statics,snd,copyable,cancelled
@@ -128,12 +132,15 @@ clang-format:
 todo:
 	bin/mk-todo.py
 
+unstage:
+	git restore --staged tests/beman/execution/CMakeLists.txt
+
 .PHONY: clean-doc
 clean-doc:
 	$(RM) -r docs/html docs/latex
 
 clean: clean-doc
-	$(RM) -r $(BUILD)
+	cmake --build $(BUILD) --target clean
 	$(RM) mkerr olderr *~
 
 distclean: clean

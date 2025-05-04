@@ -1,4 +1,4 @@
-#include <beman/execution26/execution.hpp>
+#include <beman/execution/execution.hpp>
 #include <iostream>
 #include <string>
 #include <memory>
@@ -6,13 +6,13 @@
 #include <span>
 #include <vector>
 
-namespace ex = beman::execution26;
+namespace ex = beman::execution;
 
 namespace {
 template <std::size_t Size>
 struct inline_resource : std::pmr::memory_resource {
     const char* name;
-    explicit inline_resource(const char* name) : name(name) {}
+    explicit inline_resource(const char* n) : name(n) {}
     std::byte  buffer[Size]{};      // NOLINT(hicpp-avoid-c-arrays)
     std::byte* next{+this->buffer}; // NOLINT(hicpp-no-array-decay)
 
@@ -39,13 +39,13 @@ struct allocator_aware_fun {
 
     template <typename F>
         requires std::same_as<std::remove_cvref_t<F>, std::remove_cvref_t<Fun>>
-    explicit allocator_aware_fun(F&& fun) : fun(std::forward<F>(fun)) {}
-    allocator_aware_fun(const allocator_aware_fun& other, allocator_type allocator = {})
-        : fun(other.fun), allocator(allocator) {}
+    explicit allocator_aware_fun(F&& f) : fun(std::forward<F>(f)) {}
+    allocator_aware_fun(const allocator_aware_fun& other, allocator_type alloc = {})
+        : fun(other.fun), allocator(alloc) {}
     allocator_aware_fun(allocator_aware_fun&& other) noexcept
         : fun(std::move(other.fun)), allocator(other.allocator) {}
-    allocator_aware_fun(allocator_aware_fun&& other, allocator_type allocator)
-        : fun(std::move(other.fun)), allocator(allocator) {}
+    allocator_aware_fun(allocator_aware_fun&& other, allocator_type alloc)
+        : fun(std::move(other.fun)), allocator(alloc) {}
 
     template <typename... Args>
     auto operator()(Args&&... args) noexcept {

@@ -1,14 +1,15 @@
 // examples/stop_token.cpp
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/execution26/stop_token.hpp>
+#include <beman/execution/stop_token.hpp>
 #include <condition_variable>
 #include <iostream>
+#include <exception>
 #include <latch>
 #include <mutex>
 #include <thread>
 
-namespace exec = beman::execution26;
+namespace exec = beman::execution;
 
 // The stop token classes are used to cancel work. Each
 // stop token may be connected to a stop source on which
@@ -46,8 +47,8 @@ namespace exec = beman::execution26;
 // - std::print isn't available everywhere, yet. Let's try a simple
 //   placeholder.
 namespace {
-::std::mutex        io_lock;
-void                print(std::string_view text, auto&&...) {
+::std::mutex io_lock;
+void         print(std::string_view text, auto&&...) {
     const std::lock_guard guard(io_lock);
     ::std::cout << text;
 }
@@ -71,7 +72,7 @@ struct stop_callback_for_t {
 #ifdef __cpp_lib_latch
 template <typename Token>
 auto inactive(const Token& token) -> void {
-    ::std::latch        latch(1);
+    ::std::latch              latch(1);
     const stop_callback_for_t cb(token, [&latch] { latch.count_down(); });
 
     latch.wait();
@@ -92,15 +93,20 @@ auto inactive(Token token) -> void {
 } // namespace
 
 auto main() -> int {
-    exec::stop_source source;
-    ::std::thread     act([token = source.get_token()] { active(token); });
-    ::std::thread     inact([token = source.get_token()] { inactive(token); });
+    try {
 
-    print("threads started\n");
-    source.request_stop();
-    print("threads cancelled\n");
+        exec::stop_source source;
+        ::std::thread     act([token = source.get_token()] { active(token); });
+        ::std::thread     inact([token = source.get_token()] { inactive(token); });
 
-    act.join();
-    inact.join();
-    print("done\n");
+        print("threads started\n");
+        source.request_stop();
+        print("threads cancelled\n");
+
+        act.join();
+        inact.join();
+        print("done\n");
+    } catch (const std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << "\n";
+    }
 }
