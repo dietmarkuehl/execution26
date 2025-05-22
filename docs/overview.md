@@ -352,47 +352,132 @@ static_assert(not std::execution::unstoppable_token<std::execution::inline_stop_
 </details>
 
 ## Queries
-The queries are used to obtain properties associated with and object. Except <code><a href=‘#forwarding-query’>forwarding_query</a></code> and <code><a href=‘#get-env’>get_env</a></code> the queries work on <a href=‘#environment’>environments</a>.
-
+The queries are used to obtain properties associated with and object.
 <details>
 <summary><code>forwarding_query(<i>query</i>) -> bool</code></summary>
+<p>
+The expression <code>forwarding_query(<i>query</i>)</code> determines if the the query <code><i>query</i></code> should be forwarded when the environment is wrapped. The expression is required to be a core constant expression if <code><i>query</i></code> is a core constant expression.
+</p>
+<p>
+The result of the expression is determined as follows:
+<ol>
+    <li>The result is the value of the expression <code><i>query</i>.query(forwarding_query)</code> if this expression is valid and `noexcept`.</li>
+    <li>The result is <code>true</code> if the type of <code><i>query</i></code> is <code>public</code>ly derived from <code>forwarding_query</code>.</li>
+    <li>Otherwise the result is <code>false</code>.
+</ol>
+</p>
 </details>
 <details>
-<summary><code>get_env(<i>queryable</i>)</code></summary>
+<summary><code>get_env(<i>queryable</i>) -> <i>env</i></code></summary>
+The expression <code>get_env(<i>queryable</i>)</code> yields the environment associated with <code><i>queryable</i></code>. The value of the expression is
+<ol>
+   <li>the result of <code>as_const(<i>queryable</i>).get_env()</code> if this expression is valid and <code>noexcept</code>.</li>
+   <li><code>empty_env</code> otherwise.
+</ol>
 </details>
 <details>
-<summary><code>get_allocator(<i>env</i>)</code></summary>
+<summary><code>get_allocator(<i>env</i>) -> <i>allocator</i></code></summary>
+The expression <code>get_allocator(<i>env</i>)</code> provides the allocator associated with <code><i>env</i></code> value of the expression is the result of <code>as_const(<i>env</i>).query(get_allocator)</code> if
+<ul>
+   <li>the expression is valid</code>;</li>
+   <li>the expression is <code>noexcept</code>;</li>
+   <li>the result of the expression satisfies <code><i>simple-allocator</i></code>.</li>
+</ul>
+Otherwise the expression is ill-formed.
 </details>
 <details>
-<summary><code>get_completion_scheduler(<i>env</i>)</code></summary>
+<summary><code>get_completion_scheduler&lt;Tag&gt;(<i>env</i>) -> <i>scheduler</i></code></summary>
+The expression <code>get_complet_scheduler&lt;Tag&gt;(<i>env</i>)</code> yields the completion scheduler for the completion signal <code>Tag</code> associated with <code><i>env</i></code>. This query can be used to determine the scheduler a sender <code><i>sender</i></code> completes on for a given completion signal <code>Tag</code> by using <code>get_completion_scheduler&lt;Tag&gt;(get_env(<i>sender</i>))</code>. The value of the expression is equivalent to <code>as_const(<i>env</i>).query(get_completion_scheduler&lt;Tag&gt;)</code> if
+<ol>
+   <li><code>Tag</code> is one of the types <code>set_value_t</code>, <code>set_error_t</code>, or <code>set_stopped_t</code>;
+   <li>this expression is valid;</li>
+   <li>this expression is <code>noexcept</code>;</li>
+   <li>the expression’s type satisfies <code>scheduler</code>.
+</ol>
+Otherwise the expression is invalid.
 </details>
 <details>
-<summary><code>get_completion_signatures(<i>sender</i>, <i>env</i>)</code></summary>
+<summary><code>get_completion_signatures(<i>sender</i>, <i>env</i>) -> <i>completion_signatures</i></code></summary>
+The expression <code>get_completion_signatures(<i>sender</i>, <i>env</i>)</code> is used to determine all the ways <code><i>sender</i></code> when it is <code>connect</code>ed to a receiver <code><i>receiver</i></code> whose environment <code>get_env(<i>receiver</i>)</code> is <code><i>env</i></code>. The result is a specialization of <code>completion_signatures</code>. To determine the result the <code><i>sender</i></code> is first transformed using <code>transform_sender(<i>domain</i>, <i>sender</i>, <i>env</i>)</code> to get <code><i>new-sender</i></code> with type <code><i>New-Sender-Type</i></code>. With that the result type is
+<ol>
+		  <li>the type of <code><i>new-sender</i>.get_completion_signatures(<i>env</i>)</code> if this expression is valid;</li>
+		  <li>the type <code>remove_cvref_t&lt;<i>New-Sender-Type</i>&gt;::completion_signatures</code> if this type exists;</li>
+		  <li><code>completion_signatures&lt;set_value_t(<i>T</i>), set_error_t(exception_ptr), set_stopped_t()&gt;</code> if <code><i>New-Sender-Type</i></code> is an awaitable type which would yield an object of type <code><i>T</i></code> when it is <code>co_await</code>ed;</li>
+		  <li>invalid otherwise.</code>
+</ol>
 </details>
 <details>
-<summary><code>get_delegation_scheduler(<i>env</i>)</code></summary>
+<summary><code>get_delegation_scheduler(<i>env</i>) -> <i>scheduler</i></code></summary>
+The expression <code>get_delegation_scheduler(<i>env</i>)</code> yields the scheduler associated with <code><i>env</i></code> which is used for forward progress delegation. The value of the expression is equivalent to <code>as_const(<i>env</i>).query(get_delegation_scheduler) -> <i>scheduler</i></code> if
+<ol>
+   <li>this expression is valid;</li>
+   <li>this expression is <code>noexcept</code>;</li>
+   <li>the expression’s type satisfies <code>scheduler</code>.
+</ol>
+Otherwise the expression is invalid.
 </details>
 <details>
-<summary><code>get_domain(<i>env</i>)</code>
+<summary><code>get_domain(<i>env</i>) -> <i>domain</i></code>
 </summary>
+The expression <code>get_domain(<i>env</i>)</code> yields the domain associated with <code><i>env</i></code>. The value of the expression is equivalent to <code>as_const(<i>env</i>).query(get_domain)</code> if
+<ol>
+   <li>this expression is valid;</li>
+   <li>this expression is <code>noexcept</code>.</li>
+</ol>
+Otherwise the expression is invalid.
 </details>
 <details>
-<summary><code>get_forward_progress_guarantee(<i>env</i>)</code></summary>
+<summary><code>get_forward_progress_guarantee(<i>scheduler</i>) -> forward_progress_guarantee</code></summary>
+The expression <code>get_forward_progress_guarantee(<i>scheduler</i>)</code> yields the forward progress guarantee of the <i>scheduler</i>’s execution agent. The value of the expression is equivalent to <code>as_const(<i>env</i>).query(get_scheduler)</code> if
+<ol>
+   <li>this expression is valid;</li>
+   <li>this expression is <code>noexcept</code>;</li>
+   <li>the expression’s type is <code>forward_progress_guarantee</code>.
+</ol>
+Otherwise the expression is invalid.
 </details>
 <details>
-<summary><code>get_scheduler(<i>env</i>)</code></summary>
+<summary><code>get_scheduler(<i>env</i>) -> <i>scheduler</i></code></summary>
+The expression <code>get_scheduler(<i>env</i>)</code> yields the scheduler associated with <code><i>env</i></code>. The value of the expression is equivalent to <code>as_const(<i>env</i>).query(get_scheduler)</code> if
+<ol>
+   <li>this expression is valid;</li>
+   <li>this expression is <code>noexcept</code>;</li>
+   <li>the expression’s type satisfies <code>scheduler</code>.
+</ol>
+Otherwise the expression is invalid.
 </details>
 <details>
-<summary><code>get_stop_token(<i>env</i>)</code></summary>
+<summary><code>get_stop_token(<i>env</i>) -> <i>stoppable_token</i></code></summary>
+The expression <code>get_stop_token(<i>env</i>)</code> yields the stop token associated with <code><i>env</i></code>. The value is the result of the expression <code>as_const(<i>env</i>).query(get_stop_token)</code> if
+<ul>
+   <li>the expression is valid;</li>
+   <li>the expression is <code>noexcept</code>;</li>
+   <li>the expression satisfies <code>stoppable_token</code>.</li>
+</ul>
+Otherwise the value is <code>never_stop_token{}</code>.
 </details>
 
-### Customization Point Objects
+## Customization Point Objects
 
-- <code>connect(<i>sender, receiver</i>) -> <i>operation_state</i></code>
-- <code>set_error(<i>error</i>) noexcept -> void</code>
-- <code>set_stopped(<i>receiver</i>) noexcept -> void</code>
-- <code>set_value(<i>receiver, value...</i>) noexcept -> void</code>
-- <code>start(<i>state&amp;</i>) noexcept -> void</code>
+<details>
+<summary><code>connect(<i>sender, receiver</i>) -> <i>operation_state</i></code></summary>
+</details>
+<details>
+<summary><code>set_error(<i>receiver</i>, <i>error</i>) noexcept -> void</code></summary>
+The expression <code>set_error(<i>receiver</i>, <i>error</i>)</code> invokes the <code>set_error</code> completion signal on <code><i>receiver</i></code> with the argument <code><i>error</i></code>, i.e., it invokes <code><i>receiver</i>.set_error(<i>error</i>)</code>.
+</details>
+<details>
+<summary><code>set_stopped(<i>receiver</i>) noexcept -> void</code></summary>
+The expression <code>set_stopped(<i>receiver</i>)</code> invokes the <code>set_stopped</code> completion signal on <code><i>receiver</i></code>, i.e., it invokes <code><i>receiver</i>.set_stopped()</code>.
+</details>
+<details>
+<summary><code>set_value(<i>receiver</i>, <i>value</i>...) noexcept -> void</code></summary>
+The expression <code>set_value(<i>receiver</i>, <i>value</i>...)</code> invokes the <code>set_value</code> completion signal on <code><i>receiver</i></code> with the argument(s) <code><i>value</i>...</code>, i.e., it invokes <code><i>receiver</i>.set_value(<i>value</i>...)</code>.
+</details>
+<details>
+<summary><code>start(<i>state</i>) noexcept -> void</code></summary>
+The expression <code>start(<i>state</i>)</code> starts the execution of the <code>operation_state</code> object <code><i>state</i></code>. Once this expression started executing the object <code><i>state</i></code> is required to stay valid at least until one of the completion signals of <code><i>state</i></code>’s <code>receiver</code> is invoked. Once started exactly one of the completion signals is eventually called.
+</details>
 
 ## Senders
 
