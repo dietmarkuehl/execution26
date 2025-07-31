@@ -109,8 +109,11 @@ auto test_let_value_allocator() -> void {
 }
 
 auto test_let_value_env() -> void {
-    ex::sync_wait(ex::just() | ex::let_value([] { return ex::read_env(ex::get_scheduler); }) |
-                  ex::then([](auto s) { static_assert(ex::scheduler<decltype(s)>); }));
+    ex::sync_wait(
+        ex::just()
+        | ex::let_value([]{ return ex::read_env(ex::get_scheduler); })
+        | ex::then([](auto s){ static_assert(ex::scheduler<decltype(s)>); })
+        );
 }
 } // namespace
 
