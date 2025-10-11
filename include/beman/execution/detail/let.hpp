@@ -167,7 +167,7 @@ struct impls_for<::beman::execution::detail::let_t<Completion>> : ::beman::execu
         auto mkop{[&] {
             return ::beman::execution::connect(
                 ::std::apply(::std::move(state.fun),
-                             state.args.template emplace<args_t>(::std::forward<Args>(args)...)),
+                             ::std::move(state.args.template emplace<args_t>(::std::forward<Args>(args)...))),
                 let_receiver<Receiver, decltype(state.env)>{receiver, state.env});
         }};
         ::beman::execution::start(
