@@ -6,6 +6,7 @@
 list(
     APPEND
     EXAMPLES
+    stackoverflow
     inspect
     playground
     sender-demo
